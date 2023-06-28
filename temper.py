@@ -263,6 +263,11 @@ class USBRead(object):
       self._parse_bytes('external temperature', 10, 100.0, bytes, info)
       self._parse_bytes('external humidity', 12, 100.0, bytes, info)
       return info
+    if info['firmware'][:12] == 'TEMPer2_V4.1':
+      info['firmware'] = info['firmware'][:12]
+      self._parse_bytes('internal temperature', 2, 100.0, bytes, info)
+      self._parse_bytes('external temperature', 10, 100.0, bytes, info, self.verbose)
+      return info
 
     info['error'] = 'Unknown firmware %s: %s' % (info['firmware'],
                                                  binascii.hexlify(bytes))
@@ -335,6 +340,7 @@ class Temper(object):
   def _is_known_id(self, vendorid, productid):
     '''Returns True if the vendorid and product id are valid.
     '''
+
     if self.forced_vendor_id is not None and \
        self.forced_product_id is not None:
       if self.forced_vendor_id == vendorid and \
@@ -349,6 +355,8 @@ class Temper(object):
     if vendorid == 0x1a86 and productid == 0x5523:
       return True
     if vendorid == 0x1a86 and productid == 0xe025:
+      return True
+    if vendorid == 0x3553 and productid == 0xa001:
       return True
 
     # The id is not known to this program.
