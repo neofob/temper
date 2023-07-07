@@ -12,3 +12,7 @@ services:
     ports:
       - 2610:2610
     privileged: true
+    deploy:
+      resources:
+        limits:
+          memory: 32M
