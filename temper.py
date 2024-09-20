@@ -200,12 +200,12 @@ class USBRead(object):
     info['hex_firmware'] = str(binascii.b2a_hex(firmware), 'latin-1')
     info['hex_data'] = str(binascii.b2a_hex(bytes), 'latin-1')
 
-    if info['firmware'][:10] in [ 'TEMPerF1.4', 'TEMPer1F1.' ]:
+    if info['firmware'][:10] in [ 'TEMPerF1.2', 'TEMPerF1.4', 'TEMPer1F1.' ]:
       info['firmware'] = info['firmware'][:10]
       self._parse_bytes('internal temperature', 2, 256.0, bytes, info)
       return info
 
-    if info['firmware'][:15] in [ 'TEMPerGold_V3.1', 'TEMPerGold_V3.4' ]:
+    if info['firmware'][:15] in [ 'TEMPerGold_V3.1', 'TEMPerGold_V3.3', 'TEMPerGold_V3.4', 'TEMPerGold_V3.5' ]:
       info['firmware'] = info['firmware'][:15]
       self._parse_bytes('internal temperature', 2, 100.0, bytes, info)
       return info
@@ -239,14 +239,18 @@ class USBRead(object):
       #Bytes 5-6 hold the device humidity, divide by 100
       self._parse_bytes('internal humidity', 4, 100.0, bytes, info)
       return info
+    if info['firmware'][:12] == 'TEMPer2_V4.1':
+      info['firmware'] = info['firmware'][:12]
+      self._parse_bytes('internal temperature', 2, 100.0, bytes, info)
+      self._parse_bytes('external temperature', 10, 100.0, bytes, info, self.verbose)
+      return info
     if info['firmware'][:13] == 'TEMPer1F_V3.9':
       info['firmware'] = info['firmware'][:13]
-      self._parse_bytes('internal temperature', 2, 100.0, bytes, info)
-      self._parse_bytes('internal humidity', 4, 100.0, bytes, info)
-      self._parse_bytes('external temperature', 10, 100.0, bytes, info)
-      self._parse_bytes('external humidity', 12, 100.0, bytes, info)
-      return info      
-      
+      # Bytes 3-4 hold the device temp, divide by 100
+      self._parse_bytes(
+        'internal temperature', 2, 100.0, bytes, info, self.verbose)
+      return info
+
     info['error'] = 'Unknown firmware %s: %s' % (info['firmware'],
                                                  binascii.hexlify(bytes))
     return info
@@ -286,10 +290,11 @@ class USBRead(object):
     if m is not None:
       info['internal temperature'] = float(m.group(1))
       info['internal humidity'] = float(m.group(2))
-    m = re.search(r'Temp-Outer:([0-9.]*)', reply)
+    m = re.search(r'Temp-Outer:([0-9.]*).*?, ?([0-9.]*)', reply)
     if m is not None:
       try:
         info['external temperature'] = float(m.group(1))
+        info['external humidity'] = float(m.group(2))
       except:
         pass
     return info
@@ -318,6 +323,7 @@ class Temper(object):
   def _is_known_id(self, vendorid, productid):
     '''Returns True if the vendorid and product id are valid.
     '''
+
     if self.forced_vendor_id is not None and \
        self.forced_product_id is not None:
       if self.forced_vendor_id == vendorid and \
@@ -332,6 +338,8 @@ class Temper(object):
     if vendorid == 0x1a86 and productid == 0x5523:
       return True
     if vendorid == 0x1a86 and productid == 0xe025:
+      return True
+    if vendorid == 0x3553 and productid == 0xa001:
       return True
 
     # The id is not known to this program.
