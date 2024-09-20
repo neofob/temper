@@ -249,7 +249,7 @@ class USBRead(object):
       # Bytes 3-4 hold the device temp, divide by 100
       self._parse_bytes(
         'internal temperature', 2, 100.0, bytes, info, self.verbose)
-    return info
+      return info
 
     info['error'] = 'Unknown firmware %s: %s' % (info['firmware'],
                                                  binascii.hexlify(bytes))
