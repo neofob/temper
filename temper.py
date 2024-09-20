@@ -239,7 +239,11 @@ class USBRead(object):
       #Bytes 5-6 hold the device humidity, divide by 100
       self._parse_bytes('internal humidity', 4, 100.0, bytes, info)
       return info
-
+    if info['firmware'][:12] == 'TEMPer2_V4.1':
+      info['firmware'] = info['firmware'][:12]
+      self._parse_bytes('internal temperature', 2, 100.0, bytes, info)
+      self._parse_bytes('external temperature', 10, 100.0, bytes, info, self.verbose)
+      return info
     if info['firmware'][:13] == 'TEMPer1F_V3.9':
       info['firmware'] = info['firmware'][:13]
       # Bytes 3-4 hold the device temp, divide by 100
@@ -319,6 +323,7 @@ class Temper(object):
   def _is_known_id(self, vendorid, productid):
     '''Returns True if the vendorid and product id are valid.
     '''
+
     if self.forced_vendor_id is not None and \
        self.forced_product_id is not None:
       if self.forced_vendor_id == vendorid and \
