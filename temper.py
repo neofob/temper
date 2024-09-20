@@ -205,7 +205,7 @@ class USBRead(object):
       self._parse_bytes('internal temperature', 2, 256.0, bytes, info)
       return info
 
-    if info['firmware'][:15] in [ 'TEMPerGold_V3.1', 'TEMPerGold_V3.3', 'TEMPerGold_V3.4' ]:
+    if info['firmware'][:15] in [ 'TEMPerGold_V3.1', 'TEMPerGold_V3.3', 'TEMPerGold_V3.4', 'TEMPerGold_V3.5' ]:
       info['firmware'] = info['firmware'][:15]
       self._parse_bytes('internal temperature', 2, 100.0, bytes, info)
       return info
@@ -244,6 +244,13 @@ class USBRead(object):
       self._parse_bytes('internal temperature', 2, 100.0, bytes, info)
       self._parse_bytes('external temperature', 10, 100.0, bytes, info, self.verbose)
       return info
+    if info['firmware'][:13] == 'TEMPer1F_V3.9':
+      info['firmware'] = info['firmware'][:13]
+      # Bytes 3-4 hold the device temp, divide by 100
+      self._parse_bytes(
+        'internal temperature', 2, 100.0, bytes, info, self.verbose)
+    return info
+
     info['error'] = 'Unknown firmware %s: %s' % (info['firmware'],
                                                  binascii.hexlify(bytes))
     return info
@@ -283,10 +290,11 @@ class USBRead(object):
     if m is not None:
       info['internal temperature'] = float(m.group(1))
       info['internal humidity'] = float(m.group(2))
-    m = re.search(r'Temp-Outer:([0-9.]*)', reply)
+    m = re.search(r'Temp-Outer:([0-9.]*).*?, ?([0-9.]*)', reply)
     if m is not None:
       try:
         info['external temperature'] = float(m.group(1))
+        info['external humidity'] = float(m.group(2))
       except:
         pass
     return info
